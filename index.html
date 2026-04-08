@@ -1,0 +1,245 @@
+index.html<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>亚马逊运营绩效系统</title>
+<style>
+:root{--primary:#232f3e;--accent:#ff9900;--bg:#f4f6f8;--border:#e0e0e0}
+*{box-sizing:border-box}
+body{font-family:'Microsoft YaHei',sans-serif;background:var(--bg);margin:0;padding:20px;font-size:14px;color:#333}
+.container{max-width:1200px;margin:0 auto;background:#fff;padding:25px;border-radius:12px;box-shadow:0 2px 15px rgba(0,0,0,0.08)}
+.login-box{max-width:420px;margin:80px auto;padding:30px;background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,0.1)}
+.login-box h3{margin:0 0 20px 0;color:var(--primary)}
+.login-box input,.login-box button{width:100%;padding:12px;margin:8px 0;border:1px solid var(--border);border-radius:6px;font-size:14px}
+button{cursor:pointer;border:none}
+.btn-primary{background:var(--accent);color:#fff;padding:8px 16px;border-radius:6px}
+.btn-secondary{background:#0d6efd;color:#fff;padding:8px 16px;border-radius:6px}
+.user-info{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8f9fa;border-radius:8px;margin-bottom:16px}
+.user-info div{font-weight:bold}
+.nav-bar{display:flex;gap:12px;margin-bottom:20px}
+.nav-btn{padding:8px 16px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer}
+.nav-btn.active{background:#0d6efd;color:#fff;border-color:#0d6efd}
+.section{border:1px solid var(--border);border-radius:8px;margin-bottom:20px;overflow:hidden}
+.section-header{background:var(--primary);color:#fff;padding:12px 16px;font-weight:bold}
+.row{display:flex;border-bottom:1px solid var(--border);padding:10px;align-items:flex-start}
+.col-metric{width:180px;font-weight:bold;padding-right:10px}
+.col-content{flex:1;padding-right:10px}
+.col-score{width:100px}
+textarea{width:100%;height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;resize:vertical}
+input[type="number"]{width:100%;padding:6px;border:1px solid var(--border);border-radius:4px}
+input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
+.page{display:none}
+.page.active{display:block}
+.member-list{margin-top:16px;border:1px solid #eee;border-radius:6px;max-height:400px;overflow:auto}
+.member-item{padding:12px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center}
+.member-item:last-child{border-bottom:none}
+.staff-performance{display:none}
+.leader-performance{display:none}
+.score-num{color:var(--accent);font-size:24px;font-weight:bold}
+.manager-select{padding:12px 16px;background:#f8f9fa;border-radius:8px;margin-bottom:20px;display: flex; align-items: center; gap: 10px;}
+.manager-select label { font-weight: bold; }
+.manager-select select { padding: 6px 12px; }
+.export-btn { margin-left: 20px; background: #28a745; color: white; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+.standard-card { margin-top: 20px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.standard-header { background: var(--primary); color: #fff; padding: 12px 16px; font-weight: bold; }
+.standard-table { width: 100%; border-collapse: collapse; }
+.standard-table th, .standard-table td { border: 1px solid var(--border); padding: 8px 12px; text-align: center; }
+.standard-table th { background: #f8f9fa; font-weight: bold; }
+</style>
+</head>
+<body>
+
+<div id="loginPage" class="page active">
+  <div class="login-box">
+    <h3>绩效系统登录</h3>
+    <input id="loginUser" placeholder="姓名">
+    <input id="loginPwd" type="password" placeholder="初始密码：flige5401">
+    <button class="btn-primary" onclick="login()">登录</button>
+    <button class="btn-secondary" onclick="showResetPwd()">修改密码</button>
+    <div style="font-size:12px;color:#666;margin-top:8px">初始密码统一：flige5401</div>
+  </div>
+</div>
+
+<div id="resetPwdPage" class="page">
+  <div class="login-box">
+    <h3>修改密码</h3>
+    <input id="rpUser" disabled placeholder="账号">
+    <input id="rpOld" type="password" placeholder="原密码">
+    <input id="rpNew" type="password" placeholder="新密码">
+    <button class="btn-primary" onclick="doResetPwd()">确认修改</button>
+    <button class="btn-secondary" onclick="backToLogin()">返回</button>
+  </div>
+</div>
+
+<div id="mainPage" class="page">
+  <div class="container">
+    <div class="user-info">
+      <div>
+        <span id="showName"></span>｜<span id="showRole"></span>｜组：<span id="showGroup"></span>
+      </div>
+      <div>
+        <button class="btn-secondary" onclick="logout()">退出登录</button>
+      </div>
+    </div>
+
+    <!-- 导航栏已删除 "本组专员"，仅保留绩效和人员管理 -->
+    <div class="nav-bar">
+      <button class="nav-btn active" onclick="switchTab('self')">绩效</button>
+      <button class="nav-btn manager-only" onclick="switchTab('manage')">人员管理</button>
+    </div>
+
+    <div id="tab_self" class="page active">
+      <!-- 经理专用选择人员区域 -->
+      <div id="managerPanel" class="manager-select">
+        <label>查看人员：</label>
+        <select id="selUser" onchange="loadSelectedUser()">
+          <option value="">-- 请选择人员 --</option>
+        </select>
+        <!-- 新增：导出PDF按钮 -->
+        <button class="export-btn" onclick="exportCurrentToPdf()" v-if="cur && selUser">
+          <i class="fa-download"></i> 导出PDF
+        </button>
+      </div>
+
+      <!-- 专员页面 -->
+      <div id="staffPerf" class="staff-performance">
+        <div class="section">
+          <div class="section-header">一、业绩目标（20分）【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">销售额完成率（10分）</div>
+            <div class="col-content"><textarea id="s_p1_1"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s1_1" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">订单利润率（10分）</div>
+            <div class="col-content"><textarea id="s_p1_2"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s1_2" max="10"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">二、主动性与优化建议（30分）【主管评分】</div>
+          <div class="row">
+            <div class="col-metric">工作主动性（12分）</div>
+            <div class="col-content"><textarea id="s_p2_1"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s2_1" max="12"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">问题解决（12分）</div>
+            <div class="col-content"><textarea id="s_p2_2"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s2_2" max="12"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">优化建议（6分）</div>
+            <div class="col-content"><textarea id="s_p2_3"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s2_3" max="6"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">三、日常运营（50分）【主管评分】</div>
+          <div class="row">
+            <div class="col-metric">Listing维护（20分）</div>
+            <div class="col-content"><textarea id="s_p3_1"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s3_1" max="20"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">广告优化（15分）</div>
+            <div class="col-content"><textarea id="s_p3_2"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s3_2" max="15"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">库存管理（15分）</div>
+            <div class="col-content"><textarea id="s_p3_3"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s3_3" max="15"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">四、加分/扣分项【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">加分项</div>
+            <div class="col-content"><textarea id="s_p5_1"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s5_1" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric" style="color:red">扣分项</div>
+            <div class="col-content"><textarea id="s_p5_2"></textarea></div>
+            <div class="col-score"><input type="number" id="s_s5_2"></div>
+          </div>
+        </div>
+
+        <div style="text-align:right;font-size:18px;font-weight:bold;margin-top:20px">
+          总分：<span class="score-num" id="s_total">0</span>｜等级：<span id="s_level">D</span>
+        </div>
+      </div>
+
+      <!-- 主管页面 -->
+      <div id="leaderPerf" class="leader-performance">
+        <div class="section">
+          <div class="section-header">一、个人业绩目标（25分）【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">销售与利润达成（10分）</div>
+            <div class="col-content"><textarea id="l_p1_1"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s1_1" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">库存健康管理（15分）</div>
+            <div class="col-content"><textarea id="l_p1_2"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s1_2" max="15"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">二、主动性与优化建议（30分）【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">工作主动性（10分）</div>
+            <div class="col-content"><textarea id="l_p2_1"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s2_1" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">问题解决能力（10分）</div>
+            <div class="col-content"><textarea id="l_p2_2"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s2_2" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">创新优化贡献（10分）</div>
+            <div class="col-content"><textarea id="l_p2_3"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s2_3" max="10"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">三、团队管理（45分）【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">人才梯队与培养（15分）</div>
+            <div class="col-content"><textarea id="l_p3_1"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s3_1" max="15"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">体系沉淀与风控（15分）</div>
+            <div class="col-content"><textarea id="l_p3_2"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s3_2" max="15"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric">团队业绩目标（15分）</div>
+            <div class="col-content"><textarea id="l_p3_3"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s3_3" max="15"></div>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-header">四、加分/扣分项【经理评分】</div>
+          <div class="row">
+            <div class="col-metric">加分项</div>
+            <div class="col-content"><textarea id="l_p4_1"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s4_1" max="10"></div>
+          </div>
+          <div class="row">
+            <div class="col-metric" style="color:red">扣分项</div>
+            <div class="col-content"><textarea id="l_p4_2"></textarea></div>
+            <div class="col-score"><input type="number" id="l_s4_2"></div>
+          </div>
+        </div>
+
+        <div style="text-align:right;font-size:18px;font-weight:bold;margin-top:20px">
