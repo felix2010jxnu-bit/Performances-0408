@@ -15,6 +15,7 @@ button{cursor:pointer;border:none}
 .btn-primary{background:var(--accent);color:#fff;padding:8px 16px;border-radius:6px}
 .btn-secondary{background:#0d6efd;color:#fff;padding:8px 16px;border-radius:6px}
 .btn-export{background:#28a745;color:#fff;padding:6px 12px;border-radius:4px;margin-left:10px;cursor:pointer}
+.btn-member{background:#17a2b8;color:#fff;padding:4px 8px;border-radius:4px;margin:0 4px;cursor:pointer}
 .user-info{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:#f8f9fa;border-radius:8px;margin-bottom:16px}
 .user-info div{font-weight:bold}
 .nav-bar{display:flex;gap:12px;margin-bottom:20px}
@@ -28,7 +29,6 @@ button{cursor:pointer;border:none}
 .col-score{width:100px}
 textarea{width:100%;height:60px;border:1px solid var(--border);border-radius:4px;padding:6px;resize:vertical}
 input[type="number"]{width:100%;padding:6px;border:1px solid var(--border);border-radius:4px}
-input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
 .page{display:none}
 .page.active{display:block}
 .member-list{margin-top:16px;border:1px solid #eee;border-radius:6px;max-height:400px;overflow:auto}
@@ -39,15 +39,14 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
 .leader-only{display:none}
 .manager-only{display:none}
 .score-num{color:var(--accent);font-size:24px;font-weight:bold}
-.manager-select{padding:12px 16px;background:#f8f9fa;border-radius:8px;margin-bottom:20px;display:flex;align-items:center}
-/* 绩效等级标准表样式（1:1还原截图） */
+.manager-select,.leader-select{padding:12px 16px;background:#f8f9fa;border-radius:8px;margin-bottom:20px;display:flex;align-items:center;gap:10px}
 .standard-card{margin-top:30px;border:1px solid var(--border);border-radius:8px;overflow:hidden}
 .standard-header{background:var(--primary);color:#fff;padding:12px 16px;font-weight:bold;font-size:16px}
 .standard-table{width:100%;border-collapse:collapse}
 .standard-table th,.standard-table td{border:1px solid var(--border);padding:12px;text-align:center}
 .standard-table th{background:#f8f9fa;font-weight:bold}
+.group-members{padding:12px 16px;background:#f8f9fa;border-radius:8px;margin:10px 0}
 </style>
-<!-- 引入PDF导出依赖 -->
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 </head>
@@ -86,26 +85,27 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
       </div>
     </div>
 
-    <!-- 导航栏：删除「本组专员」，「我的绩效」改为「绩效」 -->
     <div class="nav-bar">
       <button class="nav-btn active" onclick="switchTab('self')">绩效</button>
+      <button class="nav-btn manager-only leader-only" onclick="switchTab('team')" style="display:none;">本组管理</button>
       <button class="nav-btn manager-only" onclick="switchTab('manage')">人员管理</button>
     </div>
 
     <div id="tab_self" class="page active">
-      <!-- 经理专用选择人员 + 导出按钮 -->
+      <div id="leaderPanel" class="leader-select" style="display:none;">
+        <label>本组专员：</label>
+        <div id="leaderMemberList"></div>
+        <button class="btn-secondary" onclick="backToLeaderSelf()" style="margin-left:10px;">返回我的绩效</button>
+      </div>
+
       <div id="managerPanel" class="manager-select" style="display:none;">
         <label>查看人员：</label>
         <select id="selUser" style="padding:6px 12px;" onchange="loadSelectedUser()">
           <option value="">-- 请选择人员 --</option>
         </select>
-        <!-- 单人PDF导出按钮（仅经理选中人员后显示） -->
-        <button id="exportBtn" class="btn-export" style="display:none;" onclick="exportCurrentUserPdf()">
-          导出当前人员绩效(PDF)
-        </button>
+        <button id="exportBtn" class="btn-export" style="display:none;" onclick="exportCurrentUserPdf()">导出当前人员绩效(PDF)</button>
       </div>
 
-      <!-- 专员页面 -->
       <div id="staffPerf" class="staff-performance">
         <div class="section">
           <div class="section-header">一、业绩目标（20分）【经理评分】</div>
@@ -178,7 +178,6 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
         </div>
       </div>
 
-      <!-- 主管页面 -->
       <div id="leaderPerf" class="leader-performance">
         <div class="section">
           <div class="section-header">一、个人业绩目标（25分）【经理评分】</div>
@@ -199,6 +198,7 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
           <div class="row">
             <div class="col-metric">工作主动性（10分）</div>
             <div class="col-content"><textarea id="l_p2_1"></textarea></div>
+            <div class="col-content"><textarea readonly id="l_p2_1_tip" placeholder="主管可编辑此项"></textarea></div>
             <div class="col-score"><input type="number" id="l_s2_1" max="10"></div>
           </div>
           <div class="row">
@@ -251,7 +251,6 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
         </div>
       </div>
 
-      <!-- ====================== 绩效等级对照标准（1:1补齐截图内容，所有角色可见） ====================== -->
       <div class="standard-card">
         <div class="standard-header">绩效等级对照标准</div>
         <table class="standard-table">
@@ -265,41 +264,11 @@ input[type="text"]{padding:6px;border:1px solid var(--border);border-radius:4px}
             </tr>
           </thead>
           <tbody>
-            <tr>
-              <td>S</td>
-              <td>卓越</td>
-              <td>≥95</td>
-              <td>1</td>
-              <td>分值/100</td>
-            </tr>
-            <tr>
-              <td>A</td>
-              <td>优秀</td>
-              <td>85-94</td>
-              <td>1</td>
-              <td>分值/100</td>
-            </tr>
-            <tr>
-              <td>B</td>
-              <td>良好</td>
-              <td>75-84</td>
-              <td>0.9</td>
-              <td>分值/100</td>
-            </tr>
-            <tr>
-              <td>C</td>
-              <td>合格/中等</td>
-              <td>60-74</td>
-              <td>0.6</td>
-              <td>0.5</td>
-            </tr>
-            <tr>
-              <td>D</td>
-              <td>不合格</td>
-              <td>&lt;60</td>
-              <td>0</td>
-              <td>0</td>
-            </tr>
+            <tr><td>S</td><td>卓越</td><td>≥95</td><td>1</td><td>分值/100</td></tr>
+            <tr><td>A</td><td>优秀</td><td>85-94</td><td>1</td><td>分值/100</td></tr>
+            <tr><td>B</td><td>良好</td><td>75-84</td><td>0.9</td><td>分值/100</td></tr>
+            <tr><td>C</td><td>合格/中等</td><td>60-74</td><td>0.6</td><td>0.5</td></tr>
+            <tr><td>D</td><td>不合格</td><td>&lt;60</td><td>0</td><td>0</td></tr>
           </tbody>
         </table>
       </div>
@@ -328,9 +297,10 @@ function loadUsers(){
   if(d)return JSON.parse(d);
   return {"经理":{role:"manager",pwd:"flige5401",group:"总管理"}};
 }
-let users=loadUsers();
-let cur=null;
-let selUser=null;
+let users = loadUsers();
+let cur = null;
+let selUser = null;
+let leaderViewMode = false;
 const { jsPDF } = window.jspdf;
 
 function $(id){return document.getElementById(id)}
@@ -338,49 +308,109 @@ function $(id){return document.getElementById(id)}
 function switchTab(t){
   document.querySelectorAll('#tab_self,#tab_manage').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(x=>x.classList.remove('active'));
-  $('tab_'+t).classList.add('active');
-  if(t==='self')renderSelf();
-  if(t==='manage')loadManage();
+  if(t==='self'){
+    $('tab_self').classList.add('active');
+    event.currentTarget.classList.add('active');
+    renderSelf();
+  }
+  if(t==='manage'){
+    $('tab_manage').classList.add('active');
+    event.currentTarget.classList.add('active');
+    loadManage();
+  }
 }
 
 function renderSelf(){
   $('staffPerf').style.display='none';
   $('leaderPerf').style.display='none';
+  $('managerPanel').style.display='none';
+  $('leaderPanel').style.display='none';
   $('exportBtn').style.display='none';
+  leaderViewMode = false;
   if(!cur)return;
+
   if(cur.role==='manager'){
     $('managerPanel').style.display='flex';
     fillManagerSelect();
     return;
   }
-  let target=cur;
-  if(target.role==='staff'){$('staffPerf').style.display='block';calcStaff();}
-  if(target.role==='leader'){$('leaderPerf').style.display='block';calcLeader();}
+
+  if(cur.role==='leader'){
+    $('leaderPanel').style.display='flex';
+    renderLeaderSelf();
+    renderLeaderMemberList();
+    return;
+  }
+
+  if(cur.role==='staff'){
+    $('staffPerf').style.display='block';
+    loadFormData(cur.name);
+    calcStaff();
+  }
   applyPerm();
 }
 
+function renderLeaderSelf(){
+  $('leaderPerf').style.display='block';
+  loadFormData(cur.name);
+  calcLeader();
+}
+
+function renderLeaderMemberList(){
+  let container = $('leaderMemberList');
+  container.innerHTML = '';
+  for(let name in users){
+    let u = users[name];
+    if(u.role==='staff' && u.group === cur.group){
+      let btn = document.createElement('button');
+      btn.className = 'btn-member';
+      btn.innerText = name;
+      btn.onclick = ()=>{openStaffFromLeader(name)};
+      container.appendChild(btn);
+    }
+  }
+}
+
+function openStaffFromLeader(name){
+  leaderViewMode = true;
+  selUser = {name:name,...users[name]};
+  $('staffPerf').style.display = 'block';
+  $('leaderPerf').style.display = 'none';
+  loadFormData(name);
+  calcStaff();
+  applyPerm();
+}
+
+function backToLeaderSelf(){
+  leaderViewMode = false;
+  selUser = null;
+  $('staffPerf').style.display = 'none';
+  $('leaderPerf').style.display = 'block';
+  renderLeaderSelf();
+}
+
 function fillManagerSelect(){
-  let sel=$('selUser');
-  sel.innerHTML='<option value="">-- 请选择人员 --</option>';
+  let sel = $('selUser');
+  sel.innerHTML = '<option value="">-- 请选择人员 --</option>';
   for(let name in users){
     if(name==='经理')continue;
-    let o=document.createElement('option');
-    o.value=name;
-    o.innerText=name+' ('+(users[name].role==='leader'?'主管':'专员')+')';
+    let o = document.createElement('option');
+    o.value = name;
+    o.innerText = name + ' ('+(users[name].role==='leader'?'主管':'专员')+')';
     sel.appendChild(o);
   }
 }
 
 function loadSelectedUser(){
-  let name=$('selUser').value;
+  let name = $('selUser').value;
   if(!name){
     $('staffPerf').style.display='none';
     $('leaderPerf').style.display='none';
     $('exportBtn').style.display='none';
-    selUser=null;
+    selUser = null;
     return;
   }
-  selUser={name:name,...users[name]};
+  selUser = {name:name,...users[name]};
   $('staffPerf').style.display='none';
   $('leaderPerf').style.display='none';
   if(selUser.role==='staff'){
@@ -391,142 +421,74 @@ function loadSelectedUser(){
     $('leaderPerf').style.display='block';
     calcLeader();
   }
-  $('exportBtn').style.display='inline-block'; // 选中人员后显示导出按钮
+  loadFormData(name);
+  $('exportBtn').style.display='inline-block';
   applyPerm();
 }
 
-// 单人PDF导出核心方法
-async function exportCurrentUserPdf(){
-  if(!selUser){
-    alert('请先选择要导出的人员！');
-    return;
-  }
-  const loading = document.createElement('div');
-  loading.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;z-index:9999';
-  loading.innerText = '正在生成PDF，请稍候...';
-  document.body.appendChild(loading);
-
-  try {
-    // 确定当前显示的绩效容器
-    const perfContainer = selUser.role === 'staff' ? $('staffPerf') : $('leaderPerf');
-    // 合并绩效内容 + 标准表，完整导出
-    const exportDom = document.createElement('div');
-    exportDom.style.cssText = 'padding:20px;background:#fff;max-width:1200px;margin:0 auto';
-    exportDom.innerHTML = `
-      <h2 style="text-align:center;margin-bottom:20px;color:#232f3e">${selUser.name} 绩效报表</h2>
-      ${perfContainer.innerHTML}
-      ${$('.standard-card').outerHTML}
-    `;
-    document.body.appendChild(exportDom);
-
-    const canvas = await html2canvas(exportDom, {
-      scale: 2,
-      useCORS: true,
-      logging: false,
-      backgroundColor: '#ffffff'
-    });
-
-    const imgData = canvas.toDataURL('image/jpeg', 1.0);
-    const pdf = new jsPDF('p', 'mm', 'a4');
-    const imgWidth = 210;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-    heightLeft -= 297; // A4高度
-
-    // 自动分页
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-      heightLeft -= 297;
-    }
-
-    pdf.save(`${selUser.name}_绩效报表_${new Date().toLocaleDateString().replace(/\//g,'-')}.pdf`);
-    alert('导出成功！');
-    document.body.removeChild(exportDom);
-  } catch (error) {
-    console.error('导出失败：', error);
-    alert('导出失败，请重试！');
-  } finally {
-    document.body.removeChild(loading);
+function loadFormData(name){
+  let data = users[name].formData || {};
+  for(let id in data){
+    if($(id)) $(id).value = data[id];
   }
 }
 
+function saveFormData(){
+  let targetName = cur.name;
+  if(selUser) targetName = selUser.name;
+  if(leaderViewMode) targetName = selUser.name;
+  let data = {};
+  document.querySelectorAll('textarea,input').forEach(el=>{
+    if(el.id) data[el.id] = el.value;
+  });
+  users[targetName].formData = data;
+  saveUsers(users);
+}
+
+async function exportCurrentUserPdf(){
+  if(!selUser){alert('请先选择人员');return;}
+  let loading = document.createElement('div');
+  loading.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);color:#fff;display:flex;align-items:center;justify-content:center;z-index:9999';
+  loading.innerText='正在生成PDF...';
+  document.body.appendChild(loading);
+  try{
+    let dom = selUser.role==='staff' ? $('staffPerf') : $('leaderPerf');
+    let tmp = document.createElement('div');
+    tmp.style.padding='20px';
+    tmp.innerHTML=`<h2 style="text-align:center">${selUser.name} 绩效报表</h2>`+dom.innerHTML+$('.standard-card').outerHTML;
+    document.body.appendChild(tmp);
+    let canvas = await html2canvas(tmp,{scale:2,useCORS:true,background:'#fff'});
+    let pdf = new jsPDF('p','mm','a4');
+    let w=210,h=(canvas.height*w)/canvas.width;
+    pdf.addImage(canvas.toDataURL('image/jpeg'),'JPEG',0,0,w,h);
+    pdf.save(`${selUser.name}_绩效.pdf`);
+    document.body.removeChild(tmp);
+    alert('导出成功');
+  }catch(e){console.error(e);alert('导出失败')}
+  finally{document.body.removeChild(loading)}
+}
+
 function login(){
-  let u=$('loginUser').value.trim();
-  let p=$('loginPwd').value.trim();
-  users=loadUsers();
-  if(!users[u]||users[u].pwd!==p){alert('账号或密码错误');return;}
-  cur={name:u,...users[u]};
+  let u = $('loginUser').value.trim();
+  let p = $('loginPwd').value.trim();
+  users = loadUsers();
+  if(!users[u] || users[u].pwd!==p){alert('账号或密码错误');return;}
+  cur = {name:u,...users[u]};
   $('loginPage').classList.remove('active');
   $('mainPage').classList.add('active');
   $('showName').innerText=cur.name;
   $('showGroup').innerText=cur.group||'-';
   $('showRole').innerText={manager:'运营经理',leader:'运营主管',staff:'运营专员'}[cur.role];
-  if(cur.role==='manager'){
-    document.querySelectorAll('.manager-only').forEach(x=>x.style.display='inline-block');
-  }else if(cur.role==='leader'){
-    document.querySelectorAll('.manager-only').forEach(x=>x.style.display='none');
-  }else{
-    document.querySelectorAll('.manager-only').forEach(x=>x.style.display='none');
-  }
+  document.querySelectorAll('.manager-only').forEach(x=>x.style.display=cur.role==='manager'?'inline-block':'none');
+  document.querySelectorAll('.leader-only').forEach(x=>x.style.display=cur.role==='leader'?'inline-block':'none');
   switchTab('self');
 }
 
 function logout(){
-  cur=null;selUser=null;
+  saveFormData();
+  cur=null;selUser=null;leaderViewMode=false;
   $('mainPage').classList.remove('active');
   $('loginPage').classList.add('active');
-}
-
-function showResetPwd(){
-  $('loginPage').classList.add('hide');
-  $('resetPwdPage').classList.remove('hide');
-  $('rpUser').value=cur?cur.name:'';
-}
-function backToLogin(){
-  $('resetPwdPage').classList.add('hide');
-  $('loginPage').classList.remove('hide');
-}
-function doResetPwd(){
-  if(!cur)return;
-  let old=$('rpOld').value;
-  let nw=$('rpNew').value;
-  if(!old||!nw){alert('请填写完整');return;}
-  if(users[cur.name].pwd!==old){alert('原密码错误');return;}
-  users[cur.name].pwd=nw;
-  saveUsers(users);
-  alert('修改成功');
-  logout();
-}
-
-function loadManage(){
-  let html='';
-  for(let u in users){
-    if(u==='经理')continue;
-    html+=`<div class="member-item">${u}｜${users[u].role==='leader'?'主管':'专员'}｜${users[u].group}<button onclick="delUser('${u}')">删除</button></div>`;
-  }
-  $('allUserList').innerHTML=html;
-  fillManagerSelect();
-}
-function addUser(){
-  let n=$('addName').value.trim();
-  let r=$('addRole').value;
-  let g=$('addGroup').value.trim();
-  if(!n||users[n]){alert('姓名无效或已存在');return;}
-  users[n]={role:r,pwd:'flige5401',group:g||'未分组'};
-  saveUsers(users);
-  loadManage();
-  alert('添加成功');
-}
-function delUser(n){
-  if(!confirm('确定删除？'))return;
-  delete users[n];
-  saveUsers(users);
-  loadManage();
 }
 
 function applyPerm(){
@@ -536,13 +498,15 @@ function applyPerm(){
     document.querySelectorAll('input,textarea').forEach(e=>e.disabled=false);
     return;
   }
-  if(cur.role==='staff'){
-    ['s_p1_1','s_p1_2','s_p2_1','s_p2_2','s_p2_3','s_p3_1','s_p3_2','s_p3_3','s_p5_1','s_p5_2']
-      .forEach(id=>{if($(id))$(id).disabled=false;});
-  }
   if(cur.role==='leader'){
-    ['l_p1_1','l_p1_2','l_p2_1','l_p2_2','l_p2_3','l_p3_1','l_p3_2','l_p3_3','l_p4_1','l_p4_2']
-      .forEach(id=>{if($(id))$(id).disabled=false;});
+    if(leaderViewMode && selUser && selUser.role==='staff'){
+      document.querySelectorAll('[id^="s_p2_"],[id^="s_p3_"],[id^="s_s2_"],[id^="s_s3_"]').forEach(e=>e.disabled=false);
+    } else {
+      document.querySelectorAll('[id^="l_"]').forEach(e=>e.disabled=false);
+    }
+  }
+  if(cur.role==='staff'){
+    document.querySelectorAll('[id^="s_"]').forEach(e=>e.disabled=false);
   }
 }
 
@@ -553,7 +517,9 @@ function calcStaff(){
   $('s_total').innerText=t;
   let g='D';if(t>=95)g='S';else if(t>=85)g='A';else if(t>=75)g='B';else if(t>=60)g='C';
   $('s_level').innerText=g;
+  saveFormData();
 }
+
 function calcLeader(){
   let t=0;
   ['l_s1_1','l_s1_2','l_s2_1','l_s2_2','l_s2_3','l_s3_1','l_s3_2','l_s3_3','l_s4_1'].forEach(i=>t+=Number($(i).value)||0);
@@ -561,16 +527,47 @@ function calcLeader(){
   $('l_total').innerText=t;
   let g='D';if(t>=95)g='S';else if(t>=85)g='A';else if(t>=75)g='B';else if(t>=60)g='C';
   $('l_level').innerText=g;
+  saveFormData();
+}
+
+function loadManage(){
+  let html='';
+  for(let u in users){
+    if(u==='经理')continue;
+    html+=`<div class="member-item">${u}｜${users[u].role==='leader'?'主管':'专员'}｜${users[u].group}<button onclick="delUser('${u}')">删除</button></div>`;
+  }
+  $('allUserList').innerHTML=html;
+}
+
+function addUser(){
+  let n=$('addName').value.trim();
+  let r=$('addRole').value;
+  let g=$('addGroup').value.trim();
+  if(!n||users[n]){alert('姓名已存在');return;}
+  users[n]={role:r,pwd:'flige5401',group:g||'未分组',formData:{}};
+  saveUsers(users);
+  loadManage();
+  alert('添加成功');
+}
+
+function delUser(n){if(!confirm('确定删除？'))return;delete users[n];saveUsers(users);loadManage();}
+function showResetPwd(){$('loginPage').classList.add('active');$('resetPwdPage').classList.remove('active');$('rpUser').value=cur?cur.name:'';}
+function backToLogin(){$('resetPwdPage').classList.add('active');$('loginPage').classList.remove('active');}
+function doResetPwd(){
+  if(!cur)return;
+  let old=$('rpOld').value,nw=$('rpNew').value;
+  if(!old||!nw){alert('请填写完整');return;}
+  if(users[cur.name].pwd!==old){alert('原密码错误');return;}
+  users[cur.name].pwd=nw;saveUsers(users);alert('修改成功');logout();
 }
 
 window.onload=function(){
   users=loadUsers();
   $('loginPage').classList.add('active');
-  // 绑定输入框实时计算
-  document.querySelectorAll('input[type="number"]').forEach(input=>{
-    input.addEventListener('input',()=>{
-      if(input.id.startsWith('s_'))calcStaff();
-      if(input.id.startsWith('l_'))calcLeader();
+  document.querySelectorAll('input,textarea').forEach(el=>{
+    el.addEventListener('input',()=>{
+      if(el.id.startsWith('s_'))calcStaff();
+      if(el.id.startsWith('l_'))calcLeader();
     });
   });
 }
